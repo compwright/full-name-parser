@@ -1,6 +1,6 @@
 Before submitting a pull request, please make sure the following is done:
 
-1. Fork [the repository](https://github.com/ADCI/full-name-parser) and create your branch from `master`.
+1. Fork [the repository](https://github.com/compwright/full-name-parser) and create your branch from `master`.
 2. Make changes in the code and commit it with correct 
 [reference to a related issue](https://help.github.com/articles/basic-writing-and-formatting-syntax/#referencing-issues-and-pull-requests). 
 If it is not created yet, you can create it by yourself.

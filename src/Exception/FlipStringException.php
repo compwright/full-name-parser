@@ -1,34 +1,11 @@
 <?php
 
-/**
- * @file
- * Class of NameParsingException.
- */
-
-namespace ADCI\FullNameParser\Exception;
-
-use \Throwable;
+namespace CompWright\FullNameParser\Exception;
 
 /**
- * Any exception for name parsing.
- *
- * @package FullNameParser
+ * @method static self new(string $char, string $full_name)
  */
 class FlipStringException extends NameParsingException
 {
-    /**
-     * Default message text.
-     *
-     * @var string
-     */
-    const MESSAGE = "Can't flip around multiple '%s' characters in name string '%s'.";
-
-    /**
-     * {@inheritdoc}
-     */
-    public function __construct($char = null, $full_name = null, $message = null, $code = 0, Throwable $previous = null)
-    {
-        $message = sprintf(self::MESSAGE, $char, $full_name);
-        parent::__construct($message, $code, $previous);
-    }
+    public const MESSAGE = "Can't flip around multiple '%s' characters in name string '%s'.";
 }

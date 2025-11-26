@@ -1,10 +1,10 @@
 # full-name-parser
 
-[![Latest Stable Version](https://poser.pugx.org/adci/full-name-parser/v/stable)](https://github.com/ADCI/full-name-parser/releases/latest)
-[![License](https://poser.pugx.org/adci/full-name-parser/license)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.com/ADCI/full-name-parser.svg?branch=master)](https://travis-ci.com/ADCI/full-name-parser)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/bb07c274c3cba2c238d0/test_coverage)](https://codeclimate.com/github/ADCI/full-name-parser/test_coverage)
-[![Maintainability](https://api.codeclimate.com/v1/badges/bb07c274c3cba2c238d0/maintainability)](https://codeclimate.com/github/ADCI/full-name-parser/maintainability)
+[![Latest Stable Version](https://poser.pugx.org/compwright/full-name-parser/v/stable)](https://github.com/compwright/full-name-parser/releases/latest)
+[![License](https://poser.pugx.org/compwright/full-name-parser/license)](https://opensource.org/licenses/MIT)
+[![Tests](https://github.com/compwright/full-name-parser/actions/workflows/php.yml/badge.svg)](https://github.com/compwright/full-name-parser/actions/workflows/php.yml)
+
+> This is a maintained fork of the abandoned package https://github.com/ADCI/full-name-parser. It has been updated for PHP 8.3+.
 
 ## Description
 
@@ -33,7 +33,7 @@ Optionally, FullNameParser can also:
     to fix the case only when the original input is all upper or all lowercase)
 * stop on errors (the default is to return warning messages in the output,
     but never throw a PHP error, no matter how mangled the input)
-    
+
 Now FullNameParser cannot:
 * detect more variations of name prefixes, suffixes, and titles (the default
     detects 29 prefixes, 19 suffixes, 16 titles, and 8 conjunctions, but in future it
@@ -49,7 +49,7 @@ for links to other parsers which may suit your needs better.
 
 ```php
 <?php
-use ADCI\FullNameParser\Parser;
+use CompWright\FullNameParser\Parser;
 // some code ...
 $parser = new Parser();
 
@@ -114,7 +114,7 @@ mandatory_middle_name(bool|integer, optional): Throw warning if a lot of middle 
 
 ```php
 <?php
-use ADCI\FullNameParser\Parser;
+use CompWright\FullNameParser\Parser;
 // Some code...
 // Example with advanced options.
 $parser = new Parser(['part' => 'all', 'fix_case' => TRUE, 'throws' => FALSE]);
@@ -141,9 +141,11 @@ $nameObject = $parser->parse($name);
 ## Reporting Bugs
 
 If you find a name this function does not parse correctly, or any other bug,
-please report it here: https://github.com/adci/full-name-parser/issues
+please report it here: https://github.com/compwright/full-name-parser/issues
 
 ## Credits and precursors
+
+This package was forked from [ADCI/full-name-parser](https://github.com/ADCI/full-name-parser).
 
 This parser is based on and compatible with [davidgorges/human-name-parser](https://github.com/davidgorges/HumanNameParser.php). 
 

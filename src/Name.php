@@ -1,138 +1,110 @@
 <?php
 
-/**
- * @file
- * Class of Name object.
- */
+namespace CompWright\FullNameParser;
 
-namespace ADCI\FullNameParser;
+use CompWright\FullNameParser\Exception\IncorrectInputException;
 
-use ADCI\FullNameParser\Exception\NameParsingException;
-
-/**
- * Class Name.
- *
- * @package FullNameParser
- */
 class Name
 {
+    public const string PART_TITLE = 'title';
+    public const string PART_FIRST_NAME = 'first';
+    public const string PART_MIDDLE_NAME = 'middle';
+    public const string PART_LAST_NAME = 'last';
+    public const string PART_NICKNAME = 'nick';
+    public const string PART_SUFFIX = 'suffix';
+    public const string PART_ERRORS = 'error';
+    public const string PART_ALL = 'all';
 
     /**
      * Full name.
-     *
-     * @var string
      */
-    private $fullName;
+    private string $fullName;
 
     /**
      * Leading initial part.
-     *
-     * @var string
      */
-    private $leadingInitial;
+    private string $leadingInitial;
 
     /**
      * First name part.
-     *
-     * @var string
      */
-    private $firstName;
+    private string $firstName;
 
     /**
      * Nicknames part.
-     *
-     * @var string
      */
-    private $nicknames;
+    private string $nicknames;
 
     /**
      * Middle name part.
-     *
-     * @var string
      */
-    private $middleName;
+    private string $middleName;
 
     /**
      * Last name part.
-     *
-     * @var string
      */
-    private $lastName;
+    private string $lastName;
 
     /**
      * Title part.
-     *
-     * @var string
      */
-    private $academicTitle;
+    private string $academicTitle;
 
     /**
      * Suffixes part.
-     *
-     * @var string
      */
-    private $suffix;
+    private string $suffix;
 
     /**
      * Array of parsing error messages.
      *
-     * @var array
+     * @var string[]
      */
-    private $errors = [];
+    private array $errors;
 
     /**
      * Parsing result getter.
      *
-     * @param string $part
-     * Name of part of name to return for.
+     * @param string $part Name of part of name to return for.
      *
-     * @return self|array|string
-     * Return self if all parts needed.
-     * Or array if errors needed.
-     * Or string of part of name.
+     * @return ($part is self::PART_ERRORS ? string[] : string) Return self if all parts needed, or array if errors needed, or string of part of name.
      */
-    public function getPart($part)
+    public function getPart(string $part): array|string
     {
-        switch ($part) {
-            case 'title':
-                return $this->getAcademicTitle();
-            case 'first':
-                return $this->getFirstName();
-            case 'middle':
-                return $this->getMiddleName();
-            case 'last':
-                return $this->getLastName();
-            case 'nick':
-                return $this->getNicknames();
-            case 'suffix':
-                return $this->getSuffix();
-            case 'error':
-                return $this->getErrors();
-            case 'all':
-            default:
-                return $this;
+        $value = match ($part) {
+            self::PART_TITLE => $this->getAcademicTitle(),
+            self::PART_FIRST_NAME => $this->getFirstName(),
+            self::PART_MIDDLE_NAME => $this->getMiddleName(),
+            self::PART_LAST_NAME => $this->getLastName(),
+            self::PART_NICKNAME => $this->getNicknames(),
+            self::PART_SUFFIX => $this->getSuffix(),
+            self::PART_ERRORS => $this->getErrors(),
+            default => null,
+        };
+
+        if (is_null($value)) {
+            throw IncorrectInputException::new();
         }
+
+        return $value;
     }
 
     /**
      * Array of errors getter.
      *
-     * @return array
+     * @return string[]
      */
-    public function getErrors()
+    public function getErrors(): array
     {
-        return $this->errors;
+        return $this->errors ?? [];
     }
 
     /**
      * Add error message to the array of errors.
      *
-     * @param NameParsingException $ex
-     * Error to add.
-     *
-     * @return self
+     * @param Exception\NameParsingException $ex Error to add.
      */
-    public function addError(NameParsingException $ex)
+    public function addError(Exception\NameParsingException $ex): self
     {
         $this->errors[] = $ex->getMessage();
         return $this;
@@ -140,23 +112,18 @@ class Name
 
     /**
      * First name getter.
-     *
-     * @return string
      */
-    public function getFirstName()
+    public function getFirstName(): string
     {
-        return $this->firstName;
+        return $this->firstName ?? '';
     }
 
     /**
      * First name setter.
      *
-     * @param string $firstName
-     * The first name.
-     *
-     * @return self
+     * @param string $firstName The first name.
      */
-    public function setFirstName($firstName)
+    public function setFirstName(string $firstName): self
     {
         $this->firstName = $firstName;
 
@@ -165,23 +132,18 @@ class Name
 
     /**
      * Nicknames getter.
-     *
-     * @return string
      */
-    public function getNicknames()
+    public function getNicknames(): string
     {
-        return $this->nicknames;
+        return $this->nicknames ?? '';
     }
 
     /**
      * Nicknames setter.
      *
-     * @param string $nicknames
-     * The nicknames.
-     *
-     * @return self
+     * @param string $nicknames The nicknames.
      */
-    public function setNicknames($nicknames)
+    public function setNicknames(string $nicknames): self
     {
         $this->nicknames = $nicknames;
 
@@ -190,23 +152,18 @@ class Name
 
     /**
      * Middle name getter.
-     *
-     * @return string
      */
-    public function getMiddleName()
+    public function getMiddleName(): string
     {
-        return $this->middleName;
+        return $this->middleName ?? '';
     }
 
     /**
      * Middle name setter.
      *
-     * @param string $middleName
-     * The middle name.
-     *
-     * @return self
+     * @param string $middleName The middle name.
      */
-    public function setMiddleName($middleName)
+    public function setMiddleName(string $middleName): self
     {
         $this->middleName = $middleName;
 
@@ -215,23 +172,18 @@ class Name
 
     /**
      * Last name getter.
-     *
-     * @return string
      */
-    public function getLastName()
+    public function getLastName(): string
     {
-        return $this->lastName;
+        return $this->lastName ?? '';
     }
 
     /**
      * Last name setter.
      *
-     * @param string $lastName
-     * The last name.
-     *
-     * @return self
+     * @param string $lastName The last name.
      */
-    public function setLastName($lastName)
+    public function setLastName(string $lastName): self
     {
         $this->lastName = $lastName;
 
@@ -240,23 +192,18 @@ class Name
 
     /**
      * Suffixes getter.
-     *
-     * @return string
      */
-    public function getSuffix()
+    public function getSuffix(): string
     {
-        return $this->suffix;
+        return $this->suffix ?? '';
     }
 
     /**
      * Suffixes setter.
      *
-     * @param string $suffix
-     * The suffix.
-     *
-     * @return self
+     * @param string $suffix The suffix.
      */
-    public function setSuffix($suffix)
+    public function setSuffix(string $suffix): self
     {
         $this->suffix = $suffix;
 
@@ -265,23 +212,18 @@ class Name
 
     /**
      * Leading initial getter.
-     *
-     * @return string
      */
-    public function getLeadingInitial()
+    public function getLeadingInitial(): string
     {
-        return $this->leadingInitial;
+        return $this->leadingInitial ?? '';
     }
 
     /**
      * Leading initial setter.
      *
-     * @param string $leadingInitial
-     * The leading initial.
-     *
-     * @return self
+     * @param string $leadingInitial The leading initial.
      */
-    public function setLeadingInitial($leadingInitial)
+    public function setLeadingInitial(string $leadingInitial): self
     {
         $this->leadingInitial = $leadingInitial;
 
@@ -290,23 +232,18 @@ class Name
 
     /**
      * Academic title getter.
-     *
-     * @return string
      */
-    public function getAcademicTitle()
+    public function getAcademicTitle(): string
     {
-        return $this->academicTitle;
+        return $this->academicTitle ?? '';
     }
 
     /**
      * Title setter.
      *
-     * @param string $academicTitle
-     * The academic title.
-     *
-     * @return self
+     * @param string $academicTitle The academic title.
      */
-    public function setAcademicTitle($academicTitle)
+    public function setAcademicTitle(string $academicTitle): self
     {
         $this->academicTitle = $academicTitle;
 
@@ -315,23 +252,18 @@ class Name
 
     /**
      * Full name getter.
-     *
-     * @return string
      */
-    public function getFullName()
+    public function getFullName(): string
     {
-        return $this->fullName;
+        return $this->fullName ?? '';
     }
 
     /**
      * Full name setter.
      *
-     * @param string $full_name
-     * The full name.
-     *
-     * @return self
+     * @param string $full_name The full name.
      */
-    public function setFullName($full_name)
+    public function setFullName(string $full_name): self
     {
         $this->fullName = $full_name;
 

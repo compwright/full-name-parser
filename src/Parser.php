@@ -1,31 +1,9 @@
 <?php
 
-/**
- * @file
- * Split a single name string into it's name parts (first name, last name,
- *   titles, middle names)
- */
+namespace CompWright\FullNameParser;
 
-namespace ADCI\FullNameParser;
-
-use ADCI\FullNameParser\Exception\FirstNameNotFoundException;
-use ADCI\FullNameParser\Exception\FlipStringException;
-use ADCI\FullNameParser\Exception\IncorrectInputException;
-use ADCI\FullNameParser\Exception\LastNameNotFoundException;
-use ADCI\FullNameParser\Exception\ManyMiddleNamesException;
-use ADCI\FullNameParser\Exception\MultipleMatchesException;
-use ADCI\FullNameParser\Exception\NameParsingException;
-
-/**
- * Class Parser.
- *
- * @package FullNameParser
- */
 class Parser
 {
-
-    // <editor-fold desc="Const section.">
-
     /*
      * The regex use is a bit tricky.  *Everything* matched by the regex will be replaced,
      * but you can select a particular parenthesized submatch to be returned.
@@ -34,19 +12,15 @@ class Parser
 
     /**
      * Parts with surrounding punctuation as nicknames.
-     *
-     * @var string
      */
-    const REGEX_NICKNAMES = "/([\[('‘“\"]+)(.+?)(['’”\"\])]+)/";
+    public const string REGEX_NICKNAMES = "/([\[('‘“\"]+)(.+?)(['’”\"\])]+)/";
 
     /**
      * Regex for titles.
      * Each title gets a "\.*" behind it.
      * It cannot be the last word in name.
-     *
-     * @var string
      */
-    const REGEX_TITLES = "/((^| )(%s)\.* )/";
+    public const string REGEX_TITLES = "/((^| )(%s)\.* )/";
 
     /**
      * Regex for suffixes.
@@ -54,39 +28,31 @@ class Parser
      * Each suffix gets a "\.*" behind it. Numeral suffixes does not contain dots behind it.
      * After regular suffix can go extra suffixes - comma separated before each word to the end of string.
      * Or there must be end of string, space or comma after regular suffix.
-     *
-     * @var string
      */
-    const REGEX_SUFFIX = "/( (((%s)\.*)|(%s))(((,+ +\S+)*$)|( |,)))/";
+    public const string REGEX_SUFFIX = "/( (((%s)\.*)|(%s))(((,+ +\S+)*$)|( |,)))/";
 
     /**
      * Regex for last name.
-     *
-     * @var string
      */
-    const REGEX_LAST_NAME = "/(?!^)\b(([^ ]+ y|%s)\.? )*[^ ]+$/i";
+    public const string REGEX_LAST_NAME = "/(?!^)\b(([^ ]+ y|%s)\.? )*[^ ]+$/i";
 
     /**
      * Regex for initials.
      * Note the lookahead, which isn't returned or replaced.
-     *
-     * @var string
      */
-    const REGEX_LEADING_INITIAL = "/^(.\.*)(?= \p{L}{2})/";
+    public const string REGEX_LEADING_INITIAL = "/^(.\.*)(?= \p{L}{2})/";
 
     /**
      * Regex for first name.
-     *
-     * @var string
      */
-    const REGEX_FIRST_NAME = "/^[^ ]+/";
+    public const string REGEX_FIRST_NAME = "/^[^ ]+/";
 
     /**
      * List of possible suffixes.
      *
-     * @var array
+     * @var string[]
      */
-    const SUFFIXES = [
+    public const array SUFFIXES = [
         'esq',
         'esquire',
         'jr',
@@ -97,9 +63,9 @@ class Parser
     /**
      * List of numeral suffixes.
      *
-     * @var array
+     * @var string[]
      */
-    const NUMERAL_SUFFIXES = [
+    public const array NUMERAL_SUFFIXES = [
         '2',
         'iii',
         'ii',
@@ -110,9 +76,9 @@ class Parser
     /**
      * List of possible prefixes.
      *
-     * @var array
+     * @var string[]
      */
-    const PREFIXES = [
+    public const array PREFIXES = [
         'bar',
         'ben',
         'bin',
@@ -139,9 +105,9 @@ class Parser
     /**
      * List of normal cased suffixes.
      *
-     * @var array
+     * @var string[]
      */
-    const FORCED_CASE = [
+    public const array FORCED_CASE = [
         'e',
         'y',
         'av',
@@ -174,247 +140,107 @@ class Parser
     /**
      * List of possible titles.
      *
-     * @var array
+     * @var string[]
      */
-    const TITLES = ['ms', 'miss', 'mrs', 'mr', 'prof', 'dr'];
-
-    /**
-     * List of possible parts.
-     *
-     * @var array
-     */
-    const PARTS = [
-        'title',
-        'first',
-        'middle',
-        'last',
-        'nick',
-        'suffix',
-        'error',
-    ];
-
-    /**
-     * Return 'all' part by default.
-     *
-     * @var string
-     */
-    const PART = 'all';
-
-    /**
-     * Doesn't fix case by default.
-     *
-     * @var bool
-     */
-    const FIX_CASE = false;
-
-    /**
-     * Throw error by default.
-     *
-     * @var bool
-     */
-    const THROWS = true;
-
-    // </editor-fold>
-
-    // <editor-fold desc="Private vars section.">
-
-    /**
-     * Array of string possible suffixes.
-     *
-     * @var array
-     */
-    private $suffixes;
-
-    /**
-     * Array of string possible numeral suffixes.
-     *
-     * @var array
-     */
-    private $numeral_suffixes;
-
-    /**
-     * Array of string possible prefixes.
-     *
-     * @var array
-     */
-    private $prefixes;
-
-    /**
-     * Array of string possible titles.
-     *
-     * @var array
-     */
-    private $academic_titles;
+    public const array TITLES = ['ms', 'miss', 'mrs', 'mr', 'prof', 'dr'];
 
     /**
      * Temporary variable of non-parsed name part.
-     *
-     * @var string
      */
-    private $name_token;
-
-    /**
-     * Throw error if first name not found.
-     *
-     * @var boolean
-     */
-    private $mandatory_first_name = true;
-
-    /**
-     * Throw error if last name not found.
-     *
-     * @var boolean
-     */
-    private $mandatory_last_name = true;
-
-    /**
-     * Throw warning if many middle names.
-     *
-     * @var boolean
-     */
-    private $mandatory_middle_name = true;
+    private string $name_token;
 
     /**
      * Object which contains parsed name parts.
-     *
-     * @var Name
      */
-    private $name;
-
-    /**
-     * Name of part to return for.
-     *
-     * @var string
-     */
-    private $name_part;
-
-    /**
-     * Throw error if true.
-     *
-     * @var bool
-     */
-    private $stop_on_error;
-
-    /**
-     * Fix name case if true.
-     *
-     * @var bool
-     */
-    private $fix_case;
-
-    // </editor-fold>
+    private Name $name;
 
     /**
      * Parser constructor.
      *
-     * Parameter $options is array of options with next keys possible:
-     * - 'suffixes' for an array of suffixes.
-     * - 'prefix' for an array of prefixes.
-     * - 'academic_titles' for an array of titles.
-     * - 'mandatory_first_name' bool. Throw error if first name not found.
-     * - 'mandatory_last_name' bool. Throw error if last name not found.
-     * - 'part' string. Name part to return. Default 'all'.
-     * - 'fix_case' bool. Make name parts uppercase first letter. Default false.
-     * - 'throws' bool. Stop on errors. Default true.
-     *
-     * @param array $options
-     * Array of options. See method description for possible values.
+     * @param string[] $suffixes Array of suffixes.
+     * @param string[] $numeral_suffixes Array of numeral suffixes.
+     * @param string[] $prefixes Array of prefixes.
+     * @param string[] $academic_titles Array of titles.
+     * @param bool $mandatory_first_name Throw error if first name not found.
+     * @param bool $mandatory_middle_name Throw error if first name not found.
+     * @param bool $mandatory_last_name Throw error if last name not found.
+     * @param null|Name::PART_TITLE|Name::PART_FIRST_NAME|Name::PART_MIDDLE_NAME|Name::PART_LAST_NAME|Name::PART_NICKNAME|Name::PART_SUFFIX $name_part Name part to return.
+     * @param bool $stop_on_error Stop on errors.
+     * @param bool $fix_case Make name parts uppercase first letter.
      */
-    public function __construct($options = [])
-    {
-        $options += [
-            'suffixes' => self::SUFFIXES,
-            'numeral_suffixes' => self::NUMERAL_SUFFIXES,
-            'prefixes' => self::PREFIXES,
-            'academic_titles' => self::TITLES,
-            'part' => self::PART,
-            'fix_case' => self::FIX_CASE,
-            'throws' => self::THROWS,
-        ];
-        if (array_search(strtolower($options['part']), self::PARTS) === false) {
-            $options['part'] = self::PART;
-        }
-        if (isset($options['mandatory_first_name'])) {
-            $this->mandatory_first_name = (boolean)$options['mandatory_first_name'];
-        }
-        if (isset($options['mandatory_last_name'])) {
-            $this->mandatory_last_name = (boolean)$options['mandatory_last_name'];
-        }
-        if (isset($options['mandatory_middle_name'])) {
-            $this->mandatory_middle_name = (boolean)$options['mandatory_middle_name'];
-        }
-
-        $this->setStopOnError($options['throws'] == true)
-            ->setFixCase($options['fix_case'] == true)
-            ->setNamePart(strtolower($options['part']))
-            ->setSuffixes($options['suffixes'])
-            ->setNumeralSuffixes($options['numeral_suffixes'])
-            ->setPrefixes($options['prefixes'])
-            ->setAcademicTitles($options['academic_titles']);
+    public function __construct(
+        private array $suffixes = self::SUFFIXES,
+        private array $numeral_suffixes = self::NUMERAL_SUFFIXES,
+        private array $prefixes = self::PREFIXES,
+        private array $academic_titles = self::TITLES,
+        private bool $mandatory_first_name = true,
+        private bool $mandatory_middle_name = true,
+        private bool $mandatory_last_name = true,
+        private ?string $name_part = null,
+        private bool $stop_on_error = true,
+        private bool $fix_case = false,
+    ) {
     }
 
     /**
      * Parse the name into its constituent parts.
      *
-     * @param string|mixed|null $name
-     * String to parse.
+     * @param string $name String to parse.
      *
-     * @return Name|string $name
-     * Parsed name object or part of it.
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    public function parse($name)
+    public function parse(string $name): Name
     {
         $this->name = new Name();
-        if (is_string($name)) {
-            if ($this->isFixCase()) {
-                $words = explode(' ', $this->normalize($name));
-                $casedName = [];
-                foreach ($words as $word) {
-                    $casedName[] = $this->fixParsedNameCase($word);
-                }
-                $this->name->setFullName(implode(' ', $casedName));
-            } else {
-                $this->name->setFullName($this->normalize($name));
-            }
-            $this->name_token = $this->name->getFullName();
 
-            $suffixes = implode("|", $this->getSuffixes());
-            $numeral_suffixes = implode("|", $this->getNumeralSuffixes());
-            $prefixes = implode("|", $this->getPrefixes());
-            $academicTitles = implode("|", $this->getAcademicTitles());
-
-            $this->findAcademicTitle($academicTitles);
-            $this->findNicknames();
-
-            $this->findSuffix($numeral_suffixes, $suffixes);
-            $this->flipNameToken();
-
-            $this->findLastName($prefixes);
-            $this->findLeadingInitial();
-            $this->findFirstName();
-            $this->findMiddleName();
-
-            return $this->name->getPart($this->getNamePart());
+        if ($name === '') {
+            $this->handleError(Exception\IncorrectInputException::new());
+            return $this->name;
         }
-        $this->handleError(new IncorrectInputException());
-        return $this->name->getPart($this->getNamePart());
+
+        if ($this->isFixCase()) {
+            $words = explode(' ', $this->normalize($name));
+            $casedName = [];
+            foreach ($words as $word) {
+                $casedName[] = $this->fixParsedNameCase($word);
+            }
+            $this->name->setFullName(implode(' ', $casedName));
+        } else {
+            $this->name->setFullName($this->normalize($name));
+        }
+        $this->name_token = $this->name->getFullName();
+
+        $suffixes = implode("|", $this->getSuffixes());
+        $numeral_suffixes = implode("|", $this->getNumeralSuffixes());
+        $prefixes = implode("|", $this->getPrefixes());
+        $academicTitles = implode("|", $this->getAcademicTitles());
+
+        $this->findAcademicTitle($academicTitles);
+        $this->findNicknames();
+
+        $this->findSuffix($numeral_suffixes, $suffixes);
+        $this->flipNameToken();
+
+        $this->findLastName($prefixes);
+        $this->findLeadingInitial();
+        $this->findFirstName();
+        $this->findMiddleName();
+
+        return $this->name;
     }
 
     /**
      * Throw exception if set in options.
      *
-     * @param NameParsingException $ex
-     * Error to throw or add to error array.
+     * @param Exception\NameParsingException $ex Error to throw or add to error array.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function handleError(NameParsingException $ex)
+    private function handleError(Exception\NameParsingException $ex): self
     {
         $this->name->addError($ex);
         if ($this->isStopOnError()) {
-            if ($ex instanceof ManyMiddleNamesException) {
+            if ($ex instanceof Exception\ManyMiddleNamesException) {
                 trigger_error($ex, E_USER_WARNING);
             } else {
                 throw $ex;
@@ -425,12 +251,8 @@ class Parser
 
     /**
      * Makes each word in name string ucfirst.
-     *
-     * @param string $word
-     *
-     * @return string
      */
-    private function fixParsedNameCase($word)
+    private function fixParsedNameCase(string $word): string
     {
         if ($this->isFixCase()) {
             $forceCaseList = self::FORCED_CASE;
@@ -455,12 +277,9 @@ class Parser
     /**
      * Find and add academic title to Name object.
      *
-     * @param string $academicTitles
-     * Regex to find titles.
-     *
-     * @return self
+     * @param string $academicTitles Regex to find titles.
      */
-    private function findAcademicTitle($academicTitles)
+    private function findAcademicTitle(string $academicTitles): self
     {
         $regex = sprintf(self::REGEX_TITLES, $academicTitles);
         $title = $this->findWithRegex($regex, 1);
@@ -475,10 +294,9 @@ class Parser
     /**
      * Find and add nicknames to Name object.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findNicknames()
+    private function findNicknames(): self
     {
         $nicknames = $this->findWithRegex(self::REGEX_NICKNAMES, 2);
         if ($nicknames) {
@@ -493,15 +311,12 @@ class Parser
     /**
      * Find and add suffixes to Name object.
      *
-     * @param string $numeral_suffixes
-     * The numeral suffixes to be searched for.
-     * @param string $suffixes
-     * The suffixes to be searched for.
+     * @param string $numeral_suffixes The numeral suffixes to be searched for.
+     * @param string $suffixes The suffixes to be searched for.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findSuffix($numeral_suffixes, $suffixes)
+    private function findSuffix(string $numeral_suffixes, string $suffixes): self
     {
         $regex = sprintf(self::REGEX_SUFFIX, $suffixes, $numeral_suffixes);
         $suffix = $this->findWithRegex($regex, 1);
@@ -519,13 +334,11 @@ class Parser
     /**
      * Find and add last name to Name object.
      *
-     * @param string $prefixes
-     * Regex to find prefixes.
+     * @param string $prefixes Regex to find prefixes.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findLastName($prefixes)
+    private function findLastName(string $prefixes): self
     {
         $regex = sprintf(self::REGEX_LAST_NAME, $prefixes);
         $lastName = $this->findWithRegex($regex);
@@ -533,7 +346,7 @@ class Parser
             $this->name->setLastName($lastName);
             $this->removeTokenWithRegex($regex);
         } elseif ($this->mandatory_last_name) {
-            $this->handleError(new LastNameNotFoundException());
+            $this->handleError(Exception\LastNameNotFoundException::new());
         }
 
         return $this;
@@ -542,17 +355,16 @@ class Parser
     /**
      * Find and add first name to Name object.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findFirstName()
+    private function findFirstName(): self
     {
         $lastName = $this->findWithRegex(self::REGEX_FIRST_NAME);
         if ($lastName) {
             $this->name->setFirstName($lastName);
             $this->removeTokenWithRegex(self::REGEX_FIRST_NAME);
         } elseif ($this->mandatory_first_name) {
-            $this->handleError(new FirstNameNotFoundException());
+            $this->handleError(Exception\FirstNameNotFoundException::new());
         }
 
         return $this;
@@ -561,10 +373,9 @@ class Parser
     /**
      * Find and add leading initial to Name object.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findLeadingInitial()
+    private function findLeadingInitial(): self
     {
         $leadingInitial = $this->findWithRegex(self::REGEX_LEADING_INITIAL, 1);
         if ($leadingInitial) {
@@ -578,15 +389,14 @@ class Parser
     /**
      * Find and add middle name to Name object.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function findMiddleName()
+    private function findMiddleName(): self
     {
         $middleName = $this->name_token;
         $count = count(explode(' ', $middleName));
         if ($this->mandatory_middle_name && $count > 2) {
-            $this->handleError(new ManyMiddleNamesException($count));
+            $this->handleError(Exception\ManyMiddleNamesException::new($count));
         }
         if ($middleName) {
             $this->name->setMiddleName($middleName);
@@ -598,20 +408,18 @@ class Parser
     /**
      * Find and return part of name for regex.
      *
-     * @param string $regex
-     * Regex to search.
-     * @param int $submatchIndex
-     * Index of regex part.
-     *
-     * @return string|bool
-     * Founded part of name. False if not found.
+     * @param string $regex Regex to search.
+     * @param int $submatchIndex Index of regex part.
      */
-    private function findWithRegex($regex, $submatchIndex = 0)
+    private function findWithRegex(string $regex, int $submatchIndex = 0): string|false
     {
         // unicode + case-insensitive
         $regex = $regex . "ui";
         preg_match($regex, $this->name_token, $match);
         $subset = (isset($match[$submatchIndex])) ? $match[$submatchIndex] : false;
+        if ($subset === false) {
+            return false;
+        }
         // No need commas and spaces in name parts.
         $subset = $this->normalize($subset);
         return $subset;
@@ -620,23 +428,20 @@ class Parser
     /**
      * Remove founded part from name string.
      *
-     * @param string $regex
-     * Regex to remove name part.
-     * @param string $replacement
-     * String to replace.
+     * @param string $regex Regex to remove name part.
+     * @param string $replacement String to replace.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function removeTokenWithRegex($regex, $replacement = ' ')
+    private function removeTokenWithRegex(string $regex, string $replacement = ' '): self
     {
         $numReplacements = 0;
         $tokenRemoved = preg_replace($regex . 'ui', $replacement, $this->name_token, -1, $numReplacements);
         if ($numReplacements > 1) {
-            $this->handleError(new MultipleMatchesException());
+            $this->handleError(Exception\MultipleMatchesException::new());
         }
 
-        $this->name_token = $this->normalize($tokenRemoved);
+        $this->name_token = $this->normalize($tokenRemoved ?? '');
 
         return $this;
     }
@@ -645,26 +450,20 @@ class Parser
      * Removes extra whitespace and punctuation from string
      * Strips whitespace chars from ends, strips redundant whitespace, converts
      * whitespace chars to " ".
-     *
-     * @param string $taintedString
-     * String to normalize.
-     *
-     * @return string
-     * Normalized string.
      */
-    private function normalize($taintedString)
+    private function normalize(string $taintedString): string
     {
         // Remove any kind of invisible character from the start.
-        $taintedString = preg_replace("#^\s*#u", "", $taintedString);
+        $taintedString = preg_replace("#^\s*#u", "", $taintedString) ?? '';
         // Remove any kind of invisible character from the end.
-        $taintedString = preg_replace("#\s*$#u", "", $taintedString);
+        $taintedString = preg_replace("#\s*$#u", "", $taintedString) ?? '';
         // Add exception so that non-breaking space characters are not stripped during norm function.
         if (substr_count($taintedString, "\xc2\xa0") == 0) {
             // Replace any kind of invisible character in string to whitespace.
-            $taintedString = preg_replace("#\s+#u", " ", $taintedString);
+            $taintedString = preg_replace("#\s+#u", " ", $taintedString) ?? '';
         }
         // Replace two commas to one.
-        $taintedString = preg_replace("(, ?, ?)", ", ", $taintedString);
+        $taintedString = preg_replace("(, ?, ?)", ", ", $taintedString) ?? '';
         // Remove commas and spaces from the string.
         $taintedString = trim($taintedString, " ,");
 
@@ -674,10 +473,9 @@ class Parser
     /**
      * Flip name around comma.
      *
-     * @return self
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function flipNameToken()
+    private function flipNameToken(): self
     {
         $this->name_token = $this->flipStringPartsAround($this->name_token, ",");
         return $this;
@@ -688,37 +486,31 @@ class Parser
      * Front and back are determined by a specified character somewhere in the
      * middle of the string.
      *
-     * @param string $string
-     * String to flip.
-     * @param string $char
-     * Char to flip around for.
+     * @param string $string String to flip.
+     * @param string $char Char to flip around for.
      *
-     * @return string
-     * Flipped string.
-     * @throws NameParsingException
+     * @throws Exception\NameParsingException
      */
-    private function flipStringPartsAround($string, $char)
+    private function flipStringPartsAround(string $string, string $char): string
     {
         $substrings = preg_split("/$char/u", $string);
 
-        if (count($substrings) == 2) {
+        if ($substrings !== false && count($substrings) === 2) {
             $string = $substrings[1] . " " . $substrings[0];
             $string = $this->normalize($string);
-        } elseif (count($substrings) > 2) {
-            $this->handleError(new FlipStringException($char, $this->name->getFullName()));
+        } elseif ($substrings !== false && count($substrings) > 2) {
+            $this->handleError(Exception\FlipStringException::new($char, $this->name->getFullName()));
         }
 
         return $string;
     }
 
-    // <editor-fold desc="Getter/Setter section.">
-
     /**
      * Suffixes getter.
      *
-     * @return array
+     * @return string[]
      */
-    public function getSuffixes()
+    public function getSuffixes(): array
     {
         return $this->suffixes;
     }
@@ -726,12 +518,9 @@ class Parser
     /**
      * Suffixes setter.
      *
-     * @param array $suffixes
-     * The suffixes to set.
-     *
-     * @return self
+     * @param string[] $suffixes The suffixes to set.
      */
-    public function setSuffixes($suffixes)
+    public function setSuffixes(array $suffixes): self
     {
         $this->suffixes = $suffixes;
         return $this;
@@ -740,9 +529,9 @@ class Parser
     /**
      * Numeral suffixes getter.
      *
-     * @return array
+     * @return string[]
      */
-    public function getNumeralSuffixes()
+    public function getNumeralSuffixes(): array
     {
         return $this->numeral_suffixes;
     }
@@ -750,12 +539,9 @@ class Parser
     /**
      * Numeral suffixes setter.
      *
-     * @param array $numeral_suffixes
-     * The numeral suffixes to set.
-     *
-     * @return self
+     * @param string[] $numeral_suffixes The numeral suffixes to set.
      */
-    public function setNumeralSuffixes($numeral_suffixes)
+    public function setNumeralSuffixes(array $numeral_suffixes): self
     {
         $this->numeral_suffixes = $numeral_suffixes;
         return $this;
@@ -764,9 +550,9 @@ class Parser
     /**
      * Prefixes getter.
      *
-     * @return array
+     * @return string[]
      */
-    public function getPrefixes()
+    public function getPrefixes(): array
     {
         return $this->prefixes;
     }
@@ -774,12 +560,9 @@ class Parser
     /**
      * Prefixes setter.
      *
-     * @param array $prefixes
-     * The prefixes.
-     *
-     * @return self
+     * @param string[] $prefixes The prefixes.
      */
-    public function setPrefixes($prefixes)
+    public function setPrefixes(array $prefixes): self
     {
         $this->prefixes = $prefixes;
         return $this;
@@ -788,9 +571,9 @@ class Parser
     /**
      * Titles getter.
      *
-     * @return array
+     * @return string[]
      */
-    public function getAcademicTitles()
+    public function getAcademicTitles(): array
     {
         return $this->academic_titles;
     }
@@ -798,12 +581,9 @@ class Parser
     /**
      * Titles setter.
      *
-     * @param array $academicTitles
-     * The academic titles.
-     *
-     * @return self
+     * @param string[] $academicTitles The academic titles.
      */
-    public function setAcademicTitles($academicTitles)
+    public function setAcademicTitles(array $academicTitles): self
     {
         $this->academic_titles = $academicTitles;
         return $this;
@@ -812,9 +592,9 @@ class Parser
     /**
      * Name part getter.
      *
-     * @return string
+     * @return null|Name::PART_TITLE|Name::PART_FIRST_NAME|Name::PART_MIDDLE_NAME|Name::PART_LAST_NAME|Name::PART_NICKNAME|Name::PART_SUFFIX Name of part of name to return.
      */
-    public function getNamePart()
+    public function getNamePart(): ?string
     {
         return $this->name_part;
     }
@@ -822,12 +602,9 @@ class Parser
     /**
      * Name part setter.
      *
-     * @param string $namePart
-     * Name of part of name to return.
-     *
-     * @return self
+     * @param Name::PART_TITLE|Name::PART_FIRST_NAME|Name::PART_MIDDLE_NAME|Name::PART_LAST_NAME|Name::PART_NICKNAME|Name::PART_SUFFIX $namePart Name of part of name to return.
      */
-    public function setNamePart($namePart)
+    public function setNamePart(string $namePart): self
     {
         $this->name_part = $namePart;
         return $this;
@@ -835,10 +612,8 @@ class Parser
 
     /**
      * Stop on error getter.
-     *
-     * @return bool
      */
-    public function isStopOnError()
+    public function isStopOnError(): bool
     {
         return $this->stop_on_error;
     }
@@ -846,12 +621,9 @@ class Parser
     /**
      * Stop on error setter.
      *
-     * @param bool $stopOnError
-     * Stop when get parse error.
-     *
-     * @return self
+     * @param bool $stopOnError Stop when get parse error.
      */
-    public function setStopOnError($stopOnError)
+    public function setStopOnError(bool $stopOnError): self
     {
         $this->stop_on_error = $stopOnError;
         return $this;
@@ -859,10 +631,8 @@ class Parser
 
     /**
      * Fix case getter.
-     *
-     * @return bool
      */
-    public function isFixCase()
+    public function isFixCase(): bool
     {
         return $this->fix_case;
     }
@@ -870,16 +640,11 @@ class Parser
     /**
      * Fix case setter.
      *
-     * @param bool $fixCase
-     * Fix case when parse.
-     *
-     * @return self
+     * @param bool $fixCase Fix case when parse.
      */
-    public function setFixCase($fixCase)
+    public function setFixCase(bool $fixCase): self
     {
         $this->fix_case = $fixCase;
         return $this;
     }
-
-    // </editor-fold>
 }

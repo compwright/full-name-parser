@@ -1,31 +1,18 @@
 <?php
 
-/**
- * @file
- * Class of NameParsingException.
- */
+namespace CompWright\FullNameParser\Exception;
 
-namespace ADCI\FullNameParser\Exception;
+use RuntimeException;
 
 /**
- * Any exception for name parsing.
- *
- * @package FullNameParser
+ * @phpstan-consistent-constructor
  */
-class NameParsingException extends \Exception
+class NameParsingException extends RuntimeException
 {
-    /**
-     * NameParsingException constructor.
-     *
-     * @param string $message
-     * Message of error.
-     * @param int $code
-     * Code of error.
-     * @param \Throwable|null $previous
-     * Previously chained error.
-     */
-    public function __construct($message, $code = 0, \Throwable $previous = null)
+    public const MESSAGE = 'An unexpected parsing error occurred';
+
+    public static function new(int|string ...$args): static
     {
-        parent::__construct($message, $code, $previous);
+        return new static(sprintf(static::MESSAGE, ...$args));
     }
 }

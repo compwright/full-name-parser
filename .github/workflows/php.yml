@@ -1,0 +1,63 @@
+name: PHP Composer
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        operating-system: [ubuntu-latest]
+        php-versions: ['8.3', '8.4', '8.5']
+
+    runs-on: ${{ matrix.operating-system }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+        extensions: :xdebug
+        tools: composer
+        coverage: none
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Validate and install dependencies
+      run: composer validate --strict && composer install --prefer-dist --no-progress
+
+    - name: Restore test caches
+      uses: actions/cache/restore@v3
+      with:
+        path: .cache
+        key: test_cache-${{ runner.os }}-php${{ matrix.php-versions }}-${{ github.run_id }}
+        restore-keys: |
+          test_cache-${{ runner.os }}-php${{ matrix.php-versions }}-
+
+    - name: Run static analysis and unit tests
+      run: make ci
+
+    - name: Save test caches
+      uses: actions/cache/save@v3
+      if: always()
+      with:
+        path: .cache
+        key: test_cache-${{ runner.os }}-php${{ matrix.php-versions }}-${{ github.run_id }}

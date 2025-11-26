@@ -1,49 +1,322 @@
 <?php
 
-namespace ADCI\FullNameParser\Test;
+namespace CompWright\FullNameParser;
 
-use ADCI\FullNameParser\Parser;
+use CompWright\FullNameParser\Exception\FirstNameNotFoundException;
+use CompWright\FullNameParser\Exception\LastNameNotFoundException;
+use Generator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Test case based on https://github.com/davidgorges/HumanNameParser.php .
- *
- * @coversDefaultClass \ADCI\FullNameParser\Parser
- * @group FullNameParser
+ * Test case based on https://github.com/davidgorges/HumanNameParser.php
  */
 class NameTest extends TestCase
 {
+    public const OUTPUT_STR = "failed to ensure correct %s (%s) in name %s";
 
-    /**
-     * Assert error message.
-     *
-     * @var string
-     */
-    const OUTPUT_STR = "failed to ensure correct %s (%s) in name %s";
+    public static function generateNames(): Generator
+    {
+        yield [
+            'original' => 'Björn O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'O\'Malley, Björn',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Bin Lin',
+            'leading' => '',
+            'first' => 'Bin',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'Lin',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Linda Jones',
+            'leading' => '',
+            'first' => 'Linda',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'Jones',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Jason H. Priem',
+            'leading' => '',
+            'first' => 'Jason',
+            'nick' => '',
+            'middle' => 'H.',
+            'last' => 'Priem',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn O\'Malley-Muñoz',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley-Muñoz',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn C. O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'C.',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn "Bill" O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => 'Bill',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn ("Bill") O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => 'Bill',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn (Bill) O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => 'Bill',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn \'Bill\' O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => 'Bill',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn ("Wild Bill") O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => 'Wild Bill',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn C O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'C',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn C. R. O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'C. R.',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn Charles O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Charles',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn Charles R. O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Charles R.',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn van O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'van O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn Charles van der O\'Malley',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Charles',
+            'last' => 'van der O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn Charles O\'Malley y Muñoz',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Charles',
+            'last' => 'O\'Malley y Muñoz',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'Björn O\'Malley, Jr.',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => 'Jr.',
+        ];
+        yield [
+            'original' => 'Björn O\'Malley Jr',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => 'Jr',
+        ];
+        yield [
+            'original' => 'O\'Malley, Björn Jr',
+            'leading' => '',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => 'Jr',
+        ];
+        yield [
+            'original' => 'B O\'Malley',
+            'leading' => '',
+            'first' => 'B',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'William Carlos Williams',
+            'leading' => '',
+            'first' => 'William',
+            'nick' => '',
+            'middle' => 'Carlos',
+            'last' => 'Williams',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'C. Björn Roger O\'Malley',
+            'leading' => 'C.',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Roger',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'B. C. O\'Malley',
+            'leading' => '',
+            'first' => 'B.',
+            'nick' => '',
+            'middle' => 'C.',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'B C O\'Malley',
+            'leading' => '',
+            'first' => 'B',
+            'nick' => '',
+            'middle' => 'C',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'B.J. Thomas',
+            'leading' => '',
+            'first' => 'B.J.',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'Thomas',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'O\'Malley, C. Björn',
+            'leading' => 'C.',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => '',
+        ];
+        yield [
+            'original' => 'O\'Malley, C. Björn III',
+            'leading' => 'C.',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => '',
+            'last' => 'O\'Malley',
+            'suffix' => 'III',
+        ];
+        yield [
+            'original' => 'O\'Malley y Muñoz, C. Björn Roger III',
+            'leading' => 'C.',
+            'first' => 'Björn',
+            'nick' => '',
+            'middle' => 'Roger',
+            'last' => 'O\'Malley y Muñoz',
+            'suffix' => 'III',
+        ];
 
-    /**
-     * Parser variable.
-     *
-     * @var \ADCI\FullNameParser\Parser
-     */
-    private $parser;
+        yield 'https://github.com/ADCI/full-name-parser/issues/8' => [
+            'original' => 'Arantes Rodrigues, R',
+            'leading' => 'R',
+            'first' => 'Arantes',
+            'middle' => '',
+            'last' => 'Rodrigues',
+            'nick' => '',
+            'suffix' => '',
+        ];
+    }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function setUp()
+    private Parser $parser;
+
+    protected function setUp(): void
     {
         parent::setUp();
         $this->parser = new Parser();
     }
 
-    /**
-     * Simple test on suffix parsing.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testSuffix()
+    public function testSuffix(): void
     {
         $name = 'Björn O\'Malley, Jr.';
         $nameObject = $this->parser->parse($name);
@@ -52,13 +325,7 @@ class NameTest extends TestCase
         $this->assertEquals('Jr.', $nameObject->getSuffix());
     }
 
-    /**
-     * Simple parsing test.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testSimple()
+    public function testSimple(): void
     {
         $name = 'Hans Meiser';
         $nameObject = $this->parser->parse($name);
@@ -66,13 +333,7 @@ class NameTest extends TestCase
         $this->assertEquals('Meiser', $nameObject->getLastName());
     }
 
-    /**
-     * Simple parsing test with comma.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testReverse()
+    public function testReverse(): void
     {
         $name = 'Meiser, Hans';
         $nameObject = $this->parser->parse($name);
@@ -80,13 +341,7 @@ class NameTest extends TestCase
         $this->assertEquals('Meiser', $nameObject->getLastName());
     }
 
-    /**
-     * Simple parsing test with comma and title.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testReverseWithAcademicTitle()
+    public function testReverseWithAcademicTitle(): void
     {
         $name = 'Dr. Meiser, Hans';
         $nameObject = $this->parser->parse($name);
@@ -95,13 +350,7 @@ class NameTest extends TestCase
         $this->assertEquals('Hans', $nameObject->getFirstName());
     }
 
-    /**
-     * Simple parsing test with title.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testAcademicTitle()
+    public function testAcademicTitle(): void
     {
         $name = 'Dr. Hans Meiser';
         $nameObject = $this->parser->parse($name);
@@ -110,13 +359,7 @@ class NameTest extends TestCase
         $this->assertEquals('Hans', $nameObject->getFirstName());
     }
 
-    /**
-     * Simple parsing test with prefix.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testLastNameWithPrefix()
+    public function testLastNameWithPrefix(): void
     {
         $name = 'Björn van Olst';
         $nameObject = $this->parser->parse($name);
@@ -124,388 +367,72 @@ class NameTest extends TestCase
         $this->assertEquals('Björn', $nameObject->getFirstName());
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\FirstNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\FirstNameNotFoundException
-     */
-    public function testNoFirstNameDefaultException()
+    public function testNoFirstNameDefaultException(): void
     {
+        $this->expectException(FirstNameNotFoundException::class);
         $name = 'Mr. Hyde';
         $this->parser->parse($name);
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\LastNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\LastNameNotFoundException
-     */
-    public function testNoLastNameDefaultException()
+    public function testNoLastNameDefaultException(): void
     {
+        $this->expectException(LastNameNotFoundException::class);
         $name = 'Edward';
         $this->parser->parse($name);
     }
 
-    /**
-     * Simple last name parsing test.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testFirstNameNotMandatory()
+    public function testFirstNameNotMandatory(): void
     {
-        $this->parser = new Parser(['mandatory_first_name' => false]);
+        $this->parser = new Parser(mandatory_first_name: false);
         $name = 'Dr. Jekyll';
         $nameObject = $this->parser->parse($name);
         $this->assertEquals('Dr.', $nameObject->getAcademicTitle());
         $this->assertEquals('Jekyll', $nameObject->getLastName());
     }
 
-    /**
-     * Simple first name parsing test.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testLastNameNotMandatory()
+    public function testLastNameNotMandatory(): void
     {
-        $this->parser = new Parser(['mandatory_last_name' => false]);
+        $this->parser = new Parser(mandatory_last_name: false);
         $name = 'Henry';
         $nameObject = $this->parser->parse($name);
         $this->assertEquals('Henry', $nameObject->getFirstName());
     }
 
-    /**
-     * Simple middle name parsing test.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testMiddleNameNotMandatory()
+    public function testMiddleNameNotMandatory(): void
     {
         $name = 'Dr. Hans Meiser';
-        $this->parser = new Parser(['mandatory_middle_name' => false]);
+        $this->parser = new Parser(mandatory_middle_name: false);
         $nameObject = $this->parser->parse($name);
         $this->assertEquals('Dr.', $nameObject->getAcademicTitle());
         $this->assertEquals('Meiser', $nameObject->getLastName());
         $this->assertEquals('Hans', $nameObject->getFirstName());
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\FirstNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\FirstNameNotFoundException
-     */
-    public function testFirstNameMandatory()
+    public function testFirstNameMandatory(): void
     {
-        $this->parser = new Parser(['mandatory_first_name' => true]);
+        $this->expectException(FirstNameNotFoundException::class);
+        $this->parser = new Parser(mandatory_first_name: true);
         $name = 'Mr. Hyde';
         $this->parser->parse($name);
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\LastNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\LastNameNotFoundException
-     */
-    public function testLastNameMandatory()
+    public function testLastNameMandatory(): void
     {
-        $this->parser = new Parser(['mandatory_last_name' => true]);
+        $this->expectException(LastNameNotFoundException::class);
+        $this->parser = new Parser(mandatory_last_name: true);
         $name = 'Edward';
         $this->parser->parse($name);
     }
 
-    /**
-     * Complex name parsing test.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testNameList()
+    #[DataProvider('generateNames')]
+    public function testNameList(string $original, string $leading, string $first, string $nick, string $middle, string $last, string $suffix): void
     {
-        foreach (self::NAMES as $nameStr) {
-            foreach ((array)$nameStr['original'] as $name) {
-                $nameObject = $this->parser->parse($name);
-                $error_msg = sprintf(self::OUTPUT_STR, "leading initial", $nameStr['leading'], $name);
-                $this->assertEquals($nameStr['leading'], $nameObject->getLeadingInitial(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "first name", $nameStr['first'], $name);
-                $this->assertEquals($nameStr['first'], $nameObject->getFirstName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "nickname", $nameStr['nick'], $name);
-                $this->assertEquals($nameStr['nick'], $nameObject->getNickNames(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "middle name", $nameStr['middle'], $name);
-                $this->assertEquals($nameStr['middle'], $nameObject->getMiddleName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "last name", $nameStr['last'], $name);
-                $this->assertEquals($nameStr['last'], $nameObject->getLastName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "suffix", $nameStr['suffix'], $name);
-                $this->assertEquals($nameStr['suffix'], $nameObject->getSuffix(), $error_msg);
-            }
-        }
+        $nameObject = $this->parser->parse($original);
+        $this->assertEquals($leading, $nameObject->getLeadingInitial(), sprintf(self::OUTPUT_STR, "leading initial", $leading, $original));
+        $this->assertEquals($first, $nameObject->getFirstName(), sprintf(self::OUTPUT_STR, "first name", $first, $original));
+        $this->assertEquals($nick, $nameObject->getNickNames(), sprintf(self::OUTPUT_STR, "nickname", $nick, $original));
+        $this->assertEquals($middle, $nameObject->getMiddleName(), sprintf(self::OUTPUT_STR, "middle name", $middle, $original));
+        $this->assertEquals($last, $nameObject->getLastName(), sprintf(self::OUTPUT_STR, "last name", $last, $original));
+        $this->assertEquals($suffix, $nameObject->getSuffix(), sprintf(self::OUTPUT_STR, "suffix", $suffix, $original));
     }
-
-    /**
-     * Test case for complex parsing.
-     *
-     * @var array
-     */
-    const NAMES = [
-        [
-            'original' => ['Björn O\'Malley', 'O\'Malley, Björn'],
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Bin Lin',
-            'leading' => '',
-            'first' => 'Bin',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'Lin',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Linda Jones',
-            'leading' => '',
-            'first' => 'Linda',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'Jones',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Jason H. Priem',
-            'leading' => '',
-            'first' => 'Jason',
-            'nick' => '',
-            'middle' => 'H.',
-            'last' => 'Priem',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn O\'Malley-Muñoz',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley-Muñoz',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn C. O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'C.',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => [
-                'Björn "Bill" O\'Malley',
-                'Björn ("Bill") O\'Malley',
-                'Björn (Bill) O\'Malley',
-                'Björn \'Bill\' O\'Malley',
-            ],
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => 'Bill',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn ("Wild Bill") O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => 'Wild Bill',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn C O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'C',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn C. R. O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'C. R.',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn Charles O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Charles',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn Charles R. O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Charles R.',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn van O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'van O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn Charles van der O\'Malley',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Charles',
-            'last' => 'van der O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn Charles O\'Malley y Muñoz',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Charles',
-            'last' => 'O\'Malley y Muñoz',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'Björn O\'Malley, Jr.',
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => 'Jr.',
-        ],
-        [
-            'original' => ['Björn O\'Malley Jr', 'O\'Malley, Björn Jr'],
-            'leading' => '',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => 'Jr',
-        ],
-        [
-            'original' => 'B O\'Malley',
-            'leading' => '',
-            'first' => 'B',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'William Carlos Williams',
-            'leading' => '',
-            'first' => 'William',
-            'nick' => '',
-            'middle' => 'Carlos',
-            'last' => 'Williams',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'C. Björn Roger O\'Malley',
-            'leading' => 'C.',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Roger',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'B. C. O\'Malley',
-            'leading' => '',
-            'first' => 'B.',
-            'nick' => '',
-            'middle' => 'C.',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'B C O\'Malley',
-            'leading' => '',
-            'first' => 'B',
-            'nick' => '',
-            'middle' => 'C',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'B.J. Thomas',
-            'leading' => '',
-            'first' => 'B.J.',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'Thomas',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'O\'Malley, C. Björn',
-            'leading' => 'C.',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => '',
-        ],
-        [
-            'original' => 'O\'Malley, C. Björn III',
-            'leading' => 'C.',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => '',
-            'last' => 'O\'Malley',
-            'suffix' => 'III',
-        ],
-        [
-            'original' => 'O\'Malley y Muñoz, C. Björn Roger III',
-            'leading' => 'C.',
-            'first' => 'Björn',
-            'nick' => '',
-            'middle' => 'Roger',
-            'last' => 'O\'Malley y Muñoz',
-            'suffix' => 'III',
-        ],
-        /* @see https://github.com/ADCI/full-name-parser/issues/8 */
-        [
-            'original' => 'Arantes Rodrigues, R',
-            'leading' => 'R',
-            'title' => '',
-            'first' => 'Arantes',
-            'middle' => '',
-            'last' => 'Rodrigues',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => [],
-        ],
-    ];
 }

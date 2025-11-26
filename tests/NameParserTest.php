@@ -1,48 +1,28 @@
 <?php
 
-namespace ADCI\FullNameParser\Test;
+namespace CompWright\FullNameParser;
 
-use ADCI\FullNameParser\Name;
-use ADCI\FullNameParser\Parser;
+use CompWright\FullNameParser\Exception\FirstNameNotFoundException;
+use CompWright\FullNameParser\Exception\FlipStringException;
+use CompWright\FullNameParser\Exception\IncorrectInputException;
+use CompWright\FullNameParser\Exception\LastNameNotFoundException;
+use CompWright\FullNameParser\Exception\MultipleMatchesException;
+use Generator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use PHPUnit_Framework_Error_Warning;
 
 /**
  * Test case based on https://github.com/dschnelldavis/parse-full-name .
- *
- * @coversDefaultClass \ADCI\FullNameParser\Parser
- * @group bibcite
  */
 class NameParserTest extends TestCase
 {
+    private Parser $parser;
 
-    /**
-     * Parser variable.
-     *
-     * @var \ADCI\FullNameParser\Parser
-     */
-    private $parser;
-
-    /**
-     * Assert error message.
-     *
-     * @var string
-     */
-    const OUTPUT_STR = "Failed to ensure correct %s (%s) in name %s";
-
-    /**
-     * Lists of names.
-     * Switch test case.
-     *
-     * @var array
-     */
-    const CASE_NAMES = [
+    public static function generateCaseNames(): Generator
+    {
         // Switch to normal case by default in this case test. Parser not switch case by default.
-        [
-            'original' => [
-                'MR. JÜAN MARTINEZ (MARTIN) DE LORENZO Y GUTIEREZ JR.',
-                'mr. jüan martinez (martin) de lorenzo y gutierez jr.',
-            ],
+        yield [
+            'original' => 'MR. JÜAN MARTINEZ (MARTIN) DE LORENZO Y GUTIEREZ JR.',
             'title' => 'Mr.',
             'first' => 'Jüan',
             'middle' => 'Martinez',
@@ -50,10 +30,20 @@ class NameParserTest extends TestCase
             'nick' => 'Martin',
             'suffix' => 'Jr.',
             'errors' => [],
-        ],
+        ];
+        yield [
+            'original' => 'mr. jüan martinez (martin) de lorenzo y gutierez jr.',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
         // Checking for not switch case if not need.
         // Switch option must be set false.
-        [
+        yield [
             'original' => 'Mr. JÜAN MARTINEZ (MARTIN) DE LORENZO Y GUTIEREZ Jr.',
             'title' => 'Mr.',
             'first' => 'JÜAN',
@@ -63,10 +53,10 @@ class NameParserTest extends TestCase
             'suffix' => 'Jr.',
             'errors' => [],
             'fixCase' => false,
-        ],
+        ];
         // Checking for switch case if need.
         // Switch option must be set true.
-        [
+        yield [
             'original' => 'Mr. JÜAN MARTINEZ (MARTIN) DE LORENZO Y GUTIEREZ JR.',
             'title' => 'Mr.',
             'first' => 'Jüan',
@@ -76,10 +66,10 @@ class NameParserTest extends TestCase
             'suffix' => 'Jr.',
             'errors' => [],
             'fixCase' => true,
-        ],
+        ];
         // Checking for not switch case if not need.
         // Switch option must be set false.
-        [
+        yield [
             'original' => 'mr. jüan martinez (martin) de lorenzo y gutierez jr.',
             'title' => 'mr.',
             'first' => 'jüan',
@@ -89,13 +79,10 @@ class NameParserTest extends TestCase
             'suffix' => 'jr.',
             'errors' => [],
             'fixCase' => false,
-        ],
-        /* @see https://github.com/ADCI/full-name-parser/issues/10 */
-        [
-            'original' => [
-                'Dr. John P. doe-ray, Jr.',
-                'Dr. John P. DOE-RAY, Jr.',
-            ],
+        ];
+
+        yield 'https://github.com/ADCI/full-name-parser/issues/10' => [
+            'original' => 'Dr. John P. doe-ray, Jr.',
             'title' => 'Dr.',
             'first' => 'John',
             'middle' => 'P.',
@@ -103,18 +90,27 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => 'Jr.',
             'errors' => [],
-        ],
-    ];
+        ];
+        yield [
+            'original' => 'Dr. John P. DOE-RAY, Jr.',
+            'title' => 'Dr.',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+    }
 
     /**
      * Lists of names.
      * Test case for complex parsing.
-     *
-     * @var array
      */
-    const NAMES = [
-        [
-            'original' => ['David Davis', 'Davis, David'],
+    public static function generateNames(): Generator
+    {
+        yield [
+            'original' => 'David Davis',
             'title' => '',
             'first' => 'David',
             'middle' => '',
@@ -122,9 +118,21 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['Gerald Böck', 'Böck, Gerald'],
+        ];
+
+        yield [
+            'original' => 'Davis, David',
+            'title' => '',
+            'first' => 'David',
+            'middle' => '',
+            'last' => 'Davis',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Gerald Böck',
             'title' => '',
             'first' => 'Gerald',
             'middle' => '',
@@ -132,9 +140,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['David William Davis', 'Davis, David William'],
+        ];
+        yield [
+            'original' => 'Böck, Gerald',
+            'title' => '',
+            'first' => 'Gerald',
+            'middle' => '',
+            'last' => 'Böck',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'David William Davis',
             'title' => '',
             'first' => 'David',
             'middle' => 'William',
@@ -142,9 +161,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['Vincent Van Gogh', 'Van Gogh, Vincent'],
+        ];
+        yield [
+            'original' => 'Davis, David William',
+            'title' => '',
+            'first' => 'David',
+            'middle' => 'William',
+            'last' => 'Davis',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Vincent Van Gogh',
             'title' => '',
             'first' => 'Vincent',
             'middle' => '',
@@ -152,9 +182,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['Lorenzo de Médici', 'de Médici, Lorenzo'],
+        ];
+        yield [
+            'original' => 'Van Gogh, Vincent',
+            'title' => '',
+            'first' => 'Vincent',
+            'middle' => '',
+            'last' => 'Van Gogh',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Lorenzo de Médici',
             'title' => '',
             'first' => 'Lorenzo',
             'middle' => '',
@@ -162,9 +203,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['Jüan de la Véña', 'de la Véña, Jüan'],
+        ];
+        yield [
+            'original' => 'de Médici, Lorenzo',
+            'title' => '',
+            'first' => 'Lorenzo',
+            'middle' => '',
+            'last' => 'de Médici',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Jüan de la Véña',
             'title' => '',
             'first' => 'Jüan',
             'middle' => '',
@@ -172,12 +224,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => [
-                'Jüan Martinez de Lorenzo y Gutierez',
-                'de Lorenzo y Gutierez, Jüan Martinez',
-            ],
+        ];
+        yield [
+            'original' => 'de la Véña, Jüan',
+            'title' => '',
+            'first' => 'Jüan',
+            'middle' => '',
+            'last' => 'de la Véña',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Jüan Martinez de Lorenzo y Gutierez',
             'title' => '',
             'first' => 'Jüan',
             'middle' => 'Martinez',
@@ -185,16 +245,20 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => [
-                'Orenthal James "O. J." Simpson',
-                'Orenthal \'O. J.\' James Simpson',
-                '(O. J.) Orenthal James Simpson',
-                'Simpson, Orenthal James "O. J."',
-                'Simpson, Orenthal ‘O. J.’ James',
-                'Simpson, [O. J.] Orenthal James',
-            ],
+        ];
+        yield [
+            'original' => 'de Lorenzo y Gutierez, Jüan Martinez',
+            'title' => '',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => '',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Orenthal James "O. J." Simpson',
             'title' => '',
             'first' => 'Orenthal',
             'middle' => 'James',
@@ -202,9 +266,60 @@ class NameParserTest extends TestCase
             'nick' => 'O. J.',
             'suffix' => '',
             'errors' => [],
-        ],
-        [
-            'original' => ['Sammy Davis, Jr.', 'Davis, Sammy, Jr.'],
+        ];
+        yield [
+            'original' => 'Orenthal \'O. J.\' James Simpson',
+            'title' => '',
+            'first' => 'Orenthal',
+            'middle' => 'James',
+            'last' => 'Simpson',
+            'nick' => 'O. J.',
+            'suffix' => '',
+            'errors' => [],
+        ];
+        yield [
+            'original' => '(O. J.) Orenthal James Simpson',
+            'title' => '',
+            'first' => 'Orenthal',
+            'middle' => 'James',
+            'last' => 'Simpson',
+            'nick' => 'O. J.',
+            'suffix' => '',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Simpson, Orenthal James "O. J."',
+            'title' => '',
+            'first' => 'Orenthal',
+            'middle' => 'James',
+            'last' => 'Simpson',
+            'nick' => 'O. J.',
+            'suffix' => '',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Simpson, Orenthal ‘O. J.’ James',
+            'title' => '',
+            'first' => 'Orenthal',
+            'middle' => 'James',
+            'last' => 'Simpson',
+            'nick' => 'O. J.',
+            'suffix' => '',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Simpson, [O. J.] Orenthal James',
+            'title' => '',
+            'first' => 'Orenthal',
+            'middle' => 'James',
+            'last' => 'Simpson',
+            'nick' => 'O. J.',
+            'suffix' => '',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Sammy Davis, Jr.',
             'title' => '',
             'first' => 'Sammy',
             'middle' => '',
@@ -212,15 +327,21 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => 'Jr.',
             'errors' => [],
-        ],
+        ];
+        yield [
+            'original' => 'Davis, Sammy, Jr.',
+            'title' => '',
+            'first' => 'Sammy',
+            'middle' => '',
+            'last' => 'Davis',
+            'nick' => '',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+
         // Multiple suffix.
-        [
-            'original' => [
-                'John P. Doe-Ray, Jr., CLU, CFP, LUTC',
-                'Doe-Ray, John P., Jr., CLU, CFP, LUTC',
-                'John P. Doe-Ray Jr., CLU, CFP, LUTC',
-                'Doe-Ray, John P. Jr., CLU, CFP, LUTC',
-            ],
+        yield [
+            'original' => 'John P. Doe-Ray, Jr., CLU, CFP, LUTC',
             'title' => '',
             'first' => 'John',
             'middle' => 'P.',
@@ -228,13 +349,40 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => 'Jr., CLU, CFP, LUTC',
             'errors' => [],
-        ],
-        [
-            'original' => [
-                'Dr. John P. Doe-Ray, Jr.',
-                'Dr. Doe-Ray, John P., Jr.',
-                'Doe-Ray, Dr. John P., Jr.',
-            ],
+        ];
+        yield [
+            'original' => 'Doe-Ray, John P., Jr., CLU, CFP, LUTC',
+            'title' => '',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr., CLU, CFP, LUTC',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'John P. Doe-Ray Jr., CLU, CFP, LUTC',
+            'title' => '',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr., CLU, CFP, LUTC',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Doe-Ray, John P. Jr., CLU, CFP, LUTC',
+            'title' => '',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr., CLU, CFP, LUTC',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Dr. John P. Doe-Ray, Jr.',
             'title' => 'Dr.',
             'first' => 'John',
             'middle' => 'P.',
@@ -242,19 +390,30 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => 'Jr.',
             'errors' => [],
-        ],
-        [
-            'original' => [
-                'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
-                'de Lorenzo y Gutierez, Mr. Jüan Martinez (Martin) Jr.',
-                'de Lorenzo y Gutierez, Mr. Jüan (Martin) Martinez Jr.',
-                'Mr. de Lorenzo y Gutierez, Jüan Martinez (Martin) Jr.',
-                'Mr. de Lorenzo y Gutierez, Jüan (Martin) Martinez Jr.',
-                'Mr. de Lorenzo y Gutierez Jr., Jüan Martinez (Martin)',
-                'Mr. de Lorenzo y Gutierez Jr., Jüan (Martin) Martinez',
-                'Mr. de Lorenzo y Gutierez, Jr. Jüan Martinez (Martin)',
-                'Mr. de Lorenzo y Gutierez, Jr. Jüan (Martin) Martinez',
-            ],
+        ];
+        yield [
+            'original' => 'Dr. Doe-Ray, John P., Jr.',
+            'title' => 'Dr.',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Doe-Ray, Dr. John P., Jr.',
+            'title' => 'Dr.',
+            'first' => 'John',
+            'middle' => 'P.',
+            'last' => 'Doe-Ray',
+            'nick' => '',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+
+        yield [
+            'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'title' => 'Mr.',
             'first' => 'Jüan',
             'middle' => 'Martinez',
@@ -262,10 +421,91 @@ class NameParserTest extends TestCase
             'nick' => 'Martin',
             'suffix' => 'Jr.',
             'errors' => [],
-        ],
+        ];
+        yield [
+            'original' => 'de Lorenzo y Gutierez, Mr. Jüan Martinez (Martin) Jr.',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'de Lorenzo y Gutierez, Mr. Jüan (Martin) Martinez Jr.',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez, Jüan Martinez (Martin) Jr.',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez, Jüan (Martin) Martinez Jr.',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez Jr., Jüan Martinez (Martin)',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez Jr., Jüan (Martin) Martinez',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez, Jr. Jüan Martinez (Martin)',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+        yield [
+            'original' => 'Mr. de Lorenzo y Gutierez, Jr. Jüan (Martin) Martinez',
+            'title' => 'Mr.',
+            'first' => 'Jüan',
+            'middle' => 'Martinez',
+            'last' => 'de Lorenzo y Gutierez',
+            'nick' => 'Martin',
+            'suffix' => 'Jr.',
+            'errors' => [],
+        ];
+
         // Errors checking.
         // Garbage input.
-        [
+        yield [
             'original' => 'as;dfkj ;aerha;sfa ef;oia;woeig hz;sofi hz;oifj;zoseifj zs;eofij z;soeif jzs;oefi jz;osif z;osefij zs;oif jz;soefihz;sodifh z;sofu hzsieufh zlsiudfh zksefiulzseofih ;zosufh ;oseihgfz;osef h:OSfih lziusefhaowieufyg oaweifugy',
             'title' => '',
             'first' => 'as;dfkj',
@@ -274,10 +514,11 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => ['Warning: 19 middle names'],
-        ],
+        ];
+
         // Empty input.
-        [
-            'original' => null,
+        yield [
+            'original' => '',
             'title' => '',
             'first' => '',
             'middle' => '',
@@ -285,9 +526,9 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => ['Incorrect input to parse.'],
-        ],
-        /* @see https://github.com/ADCI/full-name-parser/issues/1 */
-        [
+        ];
+
+        yield 'https://github.com/ADCI/full-name-parser/issues/1' => [
             'original' => 'John J Oliveri',
             'title' => '',
             'first' => 'John',
@@ -296,9 +537,9 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        /* @see https://github.com/ADCI/full-name-parser/issues/2 */
-        [
+        ];
+
+        yield 'https://github.com/ADCI/full-name-parser/issues/2' => [
             'original' => 'Villuendas, M. V.',
             'title' => '',
             'first' => 'M.',
@@ -307,9 +548,9 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-        /* @see https://github.com/ADCI/full-name-parser/issues/6 */
-        [
+        ];
+
+        yield 'https://github.com/ADCI/full-name-parser/issues/6' => [
             'original' => 'Jokubas Phillip Gardner ',
             'title' => '',
             'first' => 'Jokubas',
@@ -318,13 +559,16 @@ class NameParserTest extends TestCase
             'nick' => '',
             'suffix' => '',
             'errors' => [],
-        ],
-    ];
+        ];
+    }
 
-    // List from https://github.com/mklaber/node-another-name-parser
-    // Except not valid strings.
-    const ADDITIONAL_NAMES = [
-        [
+    /**
+     * List from https://github.com/mklaber/node-another-name-parser
+     * Except not valid strings.
+     */
+    public static function generateAdditionalNames(): Generator
+    {
+        yield [
             'original' => 'Doe, John',
             'title' => '',
             'first' => 'John',
@@ -332,9 +576,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Doe, John P',
             'title' => '',
             'first' => 'John',
@@ -342,9 +586,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Doe, Dr. John P',
             'title' => 'Dr.',
             'first' => 'John',
@@ -352,9 +596,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'John R Doe-Smith',
             'title' => '',
             'first' => 'John',
@@ -362,9 +606,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe-Smith',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'John Doe',
             'title' => '',
             'first' => 'John',
@@ -372,9 +616,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Anthony R Von Fange III',
             'title' => 'Mr.',
             'first' => 'Anthony',
@@ -382,9 +626,9 @@ class NameParserTest extends TestCase
             'last' => 'Von Fange',
             'nick' => '',
             'suffix' => 'III',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Sara Ann Fraser',
             'title' => '',
             'first' => 'Sara',
@@ -392,41 +636,41 @@ class NameParserTest extends TestCase
             'last' => 'Fraser',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        /* Compound first names.
-        Not implemented.
-        [
-            'original' => 'Mary Ann Fraser',
-            'title' => '',
-            'first' => 'Mary Ann',
-            'middle' => '',
-            'last' => 'Fraser',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => [],
-        ],
-        [
-            'original' => 'Fraser, Mary Ann',
-            'title' => '',
-            'first' => 'Mary Ann',
-            'middle' => '',
-            'last' => 'Fraser',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => [],
-        ],
-        [
-            'original' => 'Jo Ellen Mary St. Louis',
-            'title' => '',
-            'first' => 'Jo Ellen',
-            'middle' => 'Mary',
-            'last' => 'St. Louis',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => [],
-        ],*/
-        [
+        ];
+
+        // Compound first names. Not implemented.
+        //
+        // yield [
+        //     'original' => 'Mary Ann Fraser',
+        //     'title' => '',
+        //     'first' => 'Mary Ann',
+        //     'middle' => '',
+        //     'last' => 'Fraser',
+        //     'nick' => '',
+        //     'suffix' => '',
+        // ];
+        //
+        // yield [
+        //     'original' => 'Fraser, Mary Ann',
+        //     'title' => '',
+        //     'first' => 'Mary Ann',
+        //     'middle' => '',
+        //     'last' => 'Fraser',
+        //     'nick' => '',
+        //     'suffix' => '',
+        // ];
+        //
+        // yield [
+        //     'original' => 'Jo Ellen Mary St. Louis',
+        //     'title' => '',
+        //     'first' => 'Jo Ellen',
+        //     'middle' => 'Mary',
+        //     'last' => 'St. Louis',
+        //     'nick' => '',
+        //     'suffix' => '',
+        // ];
+
+        yield [
             'original' => 'Adam',
             'title' => '',
             'first' => 'Adam',
@@ -434,9 +678,9 @@ class NameParserTest extends TestCase
             'last' => '',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Donald "Don" Rex St. Louis',
             'title' => '',
             'first' => 'Donald',
@@ -444,9 +688,9 @@ class NameParserTest extends TestCase
             'last' => 'St. Louis',
             'nick' => 'Don',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Donald (Don) Rex St. Louis',
             'title' => '',
             'first' => 'Donald',
@@ -454,9 +698,9 @@ class NameParserTest extends TestCase
             'last' => 'St. Louis',
             'nick' => 'Don',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mary Ann',
             'title' => '',
             'first' => 'Mary',
@@ -464,9 +708,9 @@ class NameParserTest extends TestCase
             'last' => 'Ann',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Jonathan Smith',
             'title' => '',
             'first' => 'Jonathan',
@@ -474,9 +718,9 @@ class NameParserTest extends TestCase
             'last' => 'Smith',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Anthony Von Fange III',
             'title' => '',
             'first' => 'Anthony',
@@ -484,9 +728,9 @@ class NameParserTest extends TestCase
             'last' => 'Von Fange',
             'nick' => '',
             'suffix' => 'III',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr John Doe',
             'title' => 'Mr',
             'first' => 'John',
@@ -494,9 +738,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr John Doe PhD, Esq',
             'title' => 'Mr',
             'first' => 'John',
@@ -504,9 +748,9 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => 'PhD, Esq',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mrs. Jane Doe',
             'title' => 'Mrs.',
             'first' => 'Jane',
@@ -514,19 +758,29 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
-            'original' => ['Smarty Pants PhD', 'Smarty Pants, PhD'],
+        ];
+
+        yield [
+            'original' => 'Smarty Pants PhD',
             'title' => '',
             'first' => 'Smarty',
             'middle' => '',
             'last' => 'Pants',
             'nick' => '',
             'suffix' => 'PhD',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
+            'original' => 'Smarty Pants, PhD',
+            'title' => '',
+            'first' => 'Smarty',
+            'middle' => '',
+            'last' => 'Pants',
+            'nick' => '',
+            'suffix' => 'PhD',
+        ];
+
+        yield [
             'original' => 'Mark P Williams',
             'title' => '',
             'first' => 'Mark',
@@ -534,9 +788,9 @@ class NameParserTest extends TestCase
             'last' => 'Williams',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Aaron bin Omar',
             'title' => '',
             'first' => 'Aaron',
@@ -544,9 +798,9 @@ class NameParserTest extends TestCase
             'last' => 'bin Omar',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Richard van der Dys',
             'title' => '',
             'first' => 'Richard',
@@ -554,9 +808,9 @@ class NameParserTest extends TestCase
             'last' => 'van der Dys',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Joe de la Cruz',
             'title' => '',
             'first' => 'Joe',
@@ -564,9 +818,9 @@ class NameParserTest extends TestCase
             'last' => 'de la Cruz',
             'nick' => '',
             'suffix' => '',
-            'errors' => [],
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'John Doe Esquire',
             'title' => '',
             'first' => 'John',
@@ -574,340 +828,177 @@ class NameParserTest extends TestCase
             'last' => 'Doe',
             'nick' => '',
             'suffix' => 'Esquire',
-            'errors' => [],
-        ],
-    ];
+        ];
+    }
 
     /**
      * Lists of names.
      * Test case for name part parsing.
-     *
-     * @var array
      */
-    const PART_NAMES = [
+    public static function generatePartNames(): Generator
+    {
         // Return one part of name implemented.
-        [
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'title' => 'Mr.',
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'first' => 'Jüan',
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'middle' => 'Martinez',
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'last' => 'de Lorenzo y Gutierez',
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'nick' => 'Martin',
-        ],
-        [
+        ];
+
+        yield [
             'original' => 'Mr. Jüan Martinez (Martin) de Lorenzo y Gutierez Jr.',
             'suffix' => 'Jr.',
-        ],
-        // Additional tests on error part.
-        [
-            'original' => null,
-            'error' => 'Incorrect input to parse.',
-        ],
-        [
-            'original' => 'Jüan, Martinez, de Lorenzo y Gutierez',
-            'error' => "Can't flip around multiple ',' characters in name string 'Jüan, Martinez, de Lorenzo y Gutierez'.",
-        ],
-    ];
+        ];
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function setUp()
+        // Additional tests on error part.
+        yield [
+            'original' => '',
+            'errors' => ['Incorrect input to parse.'],
+        ];
+
+        yield [
+            'original' => 'Jüan, Martinez, de Lorenzo y Gutierez',
+            'errors' => ["Can't flip around multiple ',' characters in name string 'Jüan, Martinez, de Lorenzo y Gutierez'."],
+        ];
+    }
+
+    protected function setUp(): void
     {
         parent::setUp();
         $this->parser = new Parser();
     }
 
-    /**
-     * Test FullNameParser parse.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testAdditionalNameList()
+    #[DataProvider('generateAdditionalNames')]
+    public function testAdditionalNameList(string $original, string $title, string $first, string $middle, string $last, string $nick, string $suffix): void
     {
-        $options = [
-            'throws' => false,
-        ];
-        $parser = new Parser($options);
-        foreach (self::ADDITIONAL_NAMES as $nameArr) {
-            foreach ((array)$nameArr['original'] as $name) {
-                $nameObject = $parser->parse($name);
-                $error_msg = sprintf(self::OUTPUT_STR, "academic title", $nameArr['title'], $name);
-                $this->assertEquals($nameArr['title'], $nameObject->getAcademicTitle(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "nickname", $nameArr['nick'], $name);
-                $this->assertEquals($nameArr['nick'], $nameObject->getNickNames(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "suffix", $nameArr['suffix'], $name);
-                $this->assertEquals($nameArr['suffix'], $nameObject->getSuffix(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "last name", $nameArr['last'], $name);
-                $this->assertEquals($nameArr['last'], $nameObject->getLastName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "first name", $nameArr['first'], $name);
-                $this->assertEquals($nameArr['first'], $nameObject->getFirstName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "middle name", $nameArr['middle'], $name);
-                $this->assertEquals($nameArr['middle'], $nameObject->getMiddleName(), $error_msg);
-            }
+        $parser = new Parser(stop_on_error: false);
+        $parsedName = $parser->parse($original);
+        $this->assertEquals($title, $parsedName->getAcademicTitle());
+        $this->assertEquals($nick, $parsedName->getNickNames());
+        $this->assertEquals($suffix, $parsedName->getSuffix());
+        $this->assertEquals($last, $parsedName->getLastName());
+        $this->assertEquals($first, $parsedName->getFirstName());
+        $this->assertEquals($middle, $parsedName->getMiddleName());
+    }
+
+    /**
+     * @param string[] $errors
+     */
+    #[DataProvider('generateNames')]
+    public function testNameList(string $original, string $title, string $first, string $middle, string $last, string $nick, string $suffix, array $errors): void
+    {
+        $parser = new Parser(stop_on_error: false);
+        $nameObject = $parser->parse($original);
+        $this->assertEquals($title, $nameObject->getAcademicTitle());
+        $this->assertEquals($nick, $nameObject->getNickNames());
+        $this->assertEquals($suffix, $nameObject->getSuffix());
+        $this->assertEquals($last, $nameObject->getLastName());
+        $this->assertEquals($first, $nameObject->getFirstName());
+        $this->assertEquals($middle, $nameObject->getMiddleName());
+        $this->assertEquals($errors, $nameObject->getErrors());
+    }
+
+    public function testThrows(): void
+    {
+        $this->expectException(IncorrectInputException::class);
+        $this->parser->parse('');
+    }
+
+    public function testDoesNotThrow(): void
+    {
+        $this->expectNotToPerformAssertions();
+        (new Parser(stop_on_error: false))->parse('');
+    }
+
+    /**
+     * @param string[] $errors
+     */
+    #[DataProvider('generateCaseNames')]
+    public function testCaseNameList(string $original, string $title, string $first, string $middle, string $last, string $nick, string $suffix, array $errors, ?bool $fixCase = null): void
+    {
+        $parser = new Parser(stop_on_error: false, fix_case: $fixCase ?? true);
+        $parsedName = $parser->parse($original);
+        $this->assertEquals($title, $parsedName->getAcademicTitle());
+        $this->assertEquals($nick, $parsedName->getNickNames());
+        $this->assertEquals($suffix, $parsedName->getSuffix());
+        $this->assertEquals($last, $parsedName->getLastName());
+        $this->assertEquals($first, $parsedName->getFirstName());
+        $this->assertEquals($middle, $parsedName->getMiddleName());
+        $this->assertEquals($errors, $parsedName->getErrors());
+    }
+
+    /**
+     * @param null|string[] $errors
+     */
+    #[DataProvider('generatePartNames')]
+    public function testPartNameList(string $original, ?string $title = null, ?string $first = null, ?string $middle = null, ?string $last = null, ?string $nick = null, ?string $suffix = null, ?array $errors = null): void
+    {
+        $parsedName = (new Parser(stop_on_error: false))->parse($original);
+        if ($title) {
+            $this->assertEquals($title, $parsedName->getAcademicTitle());
+        }
+        if ($first) {
+            $this->assertEquals($first, $parsedName->getFirstName());
+        }
+        if ($middle) {
+            $this->assertEquals($middle, $parsedName->getMiddleName());
+        }
+        if ($last) {
+            $this->assertEquals($last, $parsedName->getLastName());
+        }
+        if ($nick) {
+            $this->assertEquals($nick, $parsedName->getNicknames());
+        }
+        if ($suffix) {
+            $this->assertEquals($suffix, $parsedName->getSuffix());
+        }
+        if ($errors) {
+            $this->assertEquals($errors, $parsedName->getErrors());
         }
     }
 
-    /**
-     * Test FullNameParser parse.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testNameList()
+    public function testNoLastNameDefaultException(): void
     {
-        $options = [
-            'throws' => false,
-        ];
-        $parser = new Parser($options);
-        foreach (self::NAMES as $nameArr) {
-            foreach ((array)$nameArr['original'] as $name) {
-                $nameObject = $parser->parse($name);
-                $error_msg = sprintf(self::OUTPUT_STR, "academic title", $nameArr['title'], $name);
-                $this->assertEquals($nameArr['title'], $nameObject->getAcademicTitle(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "nickname", $nameArr['nick'], $name);
-                $this->assertEquals($nameArr['nick'], $nameObject->getNickNames(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "suffix", $nameArr['suffix'], $name);
-                $this->assertEquals($nameArr['suffix'], $nameObject->getSuffix(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "last name", $nameArr['last'], $name);
-                $this->assertEquals($nameArr['last'], $nameObject->getLastName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "first name", $nameArr['first'], $name);
-                $this->assertEquals($nameArr['first'], $nameObject->getFirstName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "middle name", $nameArr['middle'], $name);
-                $this->assertEquals($nameArr['middle'], $nameObject->getMiddleName(), $error_msg);
-                $error_msg = sprintf(self::OUTPUT_STR, "errors", implode(', ', $nameArr['errors']), $name);
-                $this->assertEquals($nameArr['errors'], $nameObject->getErrors(), $error_msg);
-            }
-        }
-    }
-
-    /**
-     * Test throw error by default.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\IncorrectInputException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\IncorrectInputException
-     */
-    public function testThrows()
-    {
-        $this->parser->parse(null);
-    }
-
-    /**
-     * Test not throw error by set options.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversNothing
-     */
-    public function testDoesNotThrow()
-    {
-        $options = [
-            'throws' => false,
-        ];
-        $parser = new Parser($options);
-        $nameObject = $parser->parse(null);
-        $this->assertInstanceOf(Name::class, $nameObject);
-    }
-
-    /**
-     * Test fix case parse.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testCaseNameList()
-    {
-        foreach (self::CASE_NAMES as $nameArr) {
-            foreach ((array)$nameArr['original'] as $name) {
-                $fixCase = isset($nameArr['fixCase']) ? $nameArr['fixCase'] : true;
-                $options = [
-                    'throws' => false,
-                    'fix_case' => $fixCase,
-                ];
-                $parser = new Parser($options);
-                $nameObject = $parser->parse($name);
-                if ($nameObject instanceof Name) {
-                    $error_msg = sprintf(self::OUTPUT_STR, "academic title", $nameArr['title'], $name);
-                    $this->assertEquals($nameArr['title'], $nameObject->getAcademicTitle(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "nickname", $nameArr['nick'], $name);
-                    $this->assertEquals($nameArr['nick'], $nameObject->getNickNames(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "suffix", $nameArr['suffix'], $name);
-                    $this->assertEquals($nameArr['suffix'], $nameObject->getSuffix(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "last name", $nameArr['last'], $name);
-                    $this->assertEquals($nameArr['last'], $nameObject->getLastName(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "first name", $nameArr['first'], $name);
-                    $this->assertEquals($nameArr['first'], $nameObject->getFirstName(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "middle name", $nameArr['middle'], $name);
-                    $this->assertEquals($nameArr['middle'], $nameObject->getMiddleName(), $error_msg);
-                    $error_msg = sprintf(self::OUTPUT_STR, "errors", implode(', ', $nameArr['errors']), $name);
-                    $this->assertEquals($nameArr['errors'], $nameObject->getErrors(), $error_msg);
-                } else {
-                    self::fail(sprintf('Incorrect object type in name %s', $name));
-                }
-            }
-        }
-    }
-
-    /**
-     * Test part of names parse.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testPartNameList()
-    {
-        foreach (self::PART_NAMES as $nameArr) {
-            $originalName = '';
-            $options = [];
-            $part = 'all';
-            $namePart = 'first';
-            foreach ($nameArr as $key => $value) {
-                switch ($key) {
-                    case 'original':
-                        $originalName = $value;
-                        break;
-                    default:
-                        $part = isset($key) ? $key : 'all';
-                        $namePart = $value;
-                        $options = [
-                            'throws' => false,
-                            'part' => $part,
-                        ];
-                        break;
-                }
-            }
-            $parser = new Parser($options);
-            $nameObject = $parser->parse($originalName);
-            if (is_string($nameObject) || ($part === 'error' && is_array($nameObject))) {
-                $error_msg = sprintf(self::OUTPUT_STR, "part", $namePart, $originalName);
-                $this->assertEquals($namePart, ((array)$nameObject)[0], $error_msg);
-            } else {
-                self::fail(sprintf('Incorrect object type %s in name %s', $part, $nameArr[0]));
-            }
-        }
-    }
-
-    /**
-     * Not any assertion because not so easy to assert warning.
-     * Simple coverage.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testManyMiddleNames()
-    {
-        $name = [
-            'original' => 'as;dfkj ;aerha;sfa ef;oia;woeig hz;sofi hz;oifj;zoseifj zs;eofij z;soeif jzs;oefi jz;osif z;osefij zs;oif jz;soefihz;sodifh z;sofu hzsieufh zlsiudfh zksefiulzseofih ;zosufh ;oseihgfz;osef h:OSfih lziusefhaowieufyg oaweifugy',
-            'title' => '',
-            'first' => 'as;dfkj',
-            'middle' => ';aerha;sfa ef;oia;woeig hz;sofi hz;oifj;zoseifj zs;eofij z;soeif jzs;oefi jz;osif z;osefij zs;oif jz;soefihz;sodifh z;sofu hzsieufh zlsiudfh zksefiulzseofih ;zosufh ;oseihgfz;osef h:OSfih lziusefhaowieufyg',
-            'last' => 'oaweifugy',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => ['Warning: 19 middle names'],
-        ];
-        try {
-            $this->parser->parse($name['original']);
-        } catch (PHPUnit_Framework_Error_Warning $ex) {
-        }
-    }
-
-    /**
-     * Not any assertion because not so easy to assert warning.
-     * Simple coverage.
-     *
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @covers \ADCI\FullNameParser\Exception\ManyMiddleNamesException
-     */
-    public function testManyMiddleNamesEx()
-    {
-        $name = [
-            'original' => 'as;dfkj ;aerha;sfa ef;oia;woeig hz;sofi hz;oifj;zoseifj zs;eofij z;soeif jzs;oefi jz;osif z;osefij zs;oif jz;soefihz;sodifh z;sofu hzsieufh zlsiudfh zksefiulzseofih ;zosufh ;oseihgfz;osef h:OSfih lziusefhaowieufyg oaweifugy',
-            'title' => '',
-            'first' => 'as;dfkj',
-            'middle' => ';aerha;sfa ef;oia;woeig hz;sofi hz;oifj;zoseifj zs;eofij z;soeif jzs;oefi jz;osif z;osefij zs;oif jz;soefihz;sodifh z;sofu hzsieufh zlsiudfh zksefiulzseofih ;zosufh ;oseihgfz;osef h:OSfih lziusefhaowieufyg',
-            'last' => 'oaweifugy',
-            'nick' => '',
-            'suffix' => '',
-            'errors' => ['Warning: 19 middle names'],
-        ];
-        try {
-            $this->parser->parse($name['original']);
-        } catch (PHPUnit_Framework_Error_Warning $ex) {
-        }
-    }
-
-    /**
-     * Additional test for exception.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\IncorrectInputException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testThrowsEx()
-    {
-        $this->parser->parse(null);
-    }
-
-    /**
-     * @expectedException \ADCI\FullNameParser\Exception\LastNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testNoLastNameDefaultException()
-    {
+        $this->expectException(LastNameNotFoundException::class);
         $name = 'Edward';
         $this->parser->parse($name);
     }
 
-    /**
-     * Additional test for exception.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\FirstNameNotFoundException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testNoFirstNameDefaultException()
+    public function testNoFirstNameDefaultException(): void
     {
+        $this->expectException(FirstNameNotFoundException::class);
         $name = 'Mr. Hyde';
         $this->parser->parse($name);
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\FlipStringException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testFlipStringException()
+    public function testFlipStringException(): void
     {
+        $this->expectException(FlipStringException::class);
         $name = 'Jüan, Martinez, de Lorenzo y Gutierez';
         $this->parser->parse($name);
     }
 
-    /**
-     * Exception test.
-     *
-     * @expectedException \ADCI\FullNameParser\Exception\MultipleMatchesException
-     * @throws \ADCI\FullNameParser\Exception\NameParsingException
-     * @coversDefaultClass
-     */
-    public function testMultipleMatchesException()
+    public function testMultipleMatchesException(): void
     {
+        $this->expectException(MultipleMatchesException::class);
         $name = 'Jüan Martinez, Jr de Lorenzo y Gutierez, Jr';
         $this->parser->parse($name);
     }
